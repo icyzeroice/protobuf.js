@@ -59,6 +59,15 @@ function decoder(mtype) {
                         ("case 2:");
 
             if (types.basic[type] === undefined) gen
+
+                            // HACK: `types.basic[type] === undefined` means wire_type is 2
+                            //        if the wire_type is wrong, skip the the decode
+                            // ("if (%i !== (t&7)) {", typeof types.basic[type] === 'number' ? types.basic[type] : 2)
+                            ("if (2 !== (t&7)) {")
+                            ("r.skipType(t&7)")
+                            ("break")
+                            ("}")
+
                             ("value=types[%i].decode(r,r.uint32())", i); // can't be groups
             else gen
                             ("value=r.%s()", type);
@@ -91,14 +100,31 @@ function decoder(mtype) {
                 ("}else");
 
             // Non-packed
-            if (types.basic[type] === undefined) gen(field.resolvedType.group
+            if (types.basic[type] === undefined) gen
+
+                // HACK: ditto.
+                ("if (2 !== (t&7)) {")
+                ("r.skipType(t&7)")
+                ("break")
+                ("}")
+
+                (field.resolvedType.group
                     ? "%s.push(types[%i].decode(r))"
                     : "%s.push(types[%i].decode(r,r.uint32()))", ref, i);
             else gen
                     ("%s.push(r.%s())", ref, type);
 
         // Non-repeated
-        } else if (types.basic[type] === undefined) gen(field.resolvedType.group
+
+        } else if (types.basic[type] === undefined) gen
+
+            // HACK: ditto.
+            ("if (2 !== (t&7)) {")
+            ("r.skipType(t&7)")
+            ("break")
+            ("}")
+
+            (field.resolvedType.group
                 ? "%s=types[%i].decode(r)"
                 : "%s=types[%i].decode(r,r.uint32())", ref, i);
         else gen
